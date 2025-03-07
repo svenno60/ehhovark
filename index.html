@@ -3,43 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ehhovark Report Generator</title>
+    <title>Ehhovark Generaator</title>
 </head>
 <body>
-    <h1>Ehhovark Report Generator</h1>
+    <h1>Ehhovark Generaator</h1>
     <form id="inputForm">
         <label for="sugu">Sugu (m/n):</label>
         <input type="text" id="sugu" name="sugu" required><br><br>
-        <label for="userInput">Enter your text:</label><br>
+        <label for="userInput">Sisesta tekst:</label><br>
         <textarea id="userInput" name="userInput" rows="10" cols="50" required></textarea><br><br>
-        <button type="submit">Generate Report</button>
+        <label for="debug">Debug mode:</label>
+        <input type="checkbox" id="debug" name="debug">
+        <select id="debugLevel">
+            <option value="info">Info</option>
+            <option value="warn">Warning</option>
+            <option value="error">Error</option>
+        </select>
+        <button type="button" onclick="clearDebug()">Clear Debug</button><br><br>
+        <button type="submit">Genereeri raport</button>
     </form>
+    <div id="debugOutput" style="display:none; background: #f5f5f5; padding: 10px; border: 1px solid #ddd; margin: 10px 0;">
+        <h2>Debug Output</h2>
+        <pre id="debugLog" style="white-space: pre-wrap; font-family: monospace;"></pre>
+    </div>
     <h2>Generated Report</h2>
     <pre id="report"></pre>
 
     <script>
+        function clearDebug() {
+            document.getElementById('debugLog').textContent = '';
+            console.clear();
+        }
+
+        function debugLog(msg, data, level = 'info') {
+            if (!document.getElementById('debug').checked) return;
+            if (document.getElementById('debugLevel').value === 'error' && level !== 'error') return;
+            if (document.getElementById('debugLevel').value === 'warn' && level === 'info') return;
+            
+            const debugDiv = document.getElementById('debugOutput');
+            const debugLog = document.getElementById('debugLog');
+            debugDiv.style.display = 'block';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const logColor = level === 'error' ? 'red' : level === 'warn' ? 'orange' : 'blue';
+            const logMsg = `[${timestamp}] ${level.toUpperCase()}: ${msg}\n${data ? JSON.stringify(data, null, 2) + '\n' : ''}`;
+            
+            debugLog.innerHTML += `<span style="color: ${logColor}">${logMsg}</span>`;
+            
+            // Console output with grouping
+            console.group(`${level.toUpperCase()}: ${msg}`);
+            if (data) console.log(data);
+            console.groupEnd();
+        }
+
         document.getElementById('inputForm').addEventListener('submit', function(event) {
             event.preventDefault();
-            const sugu = document.getElementById('sugu').value.toLowerCase();
-            const userInput = document.getElementById('userInput').value;
-
-            const report = generateReport(sugu, userInput);
-            document.getElementById('report').textContent = report;
+            try {
+                const sugu = document.getElementById('sugu').value.toLowerCase();
+                const userInput = document.getElementById('userInput').value;
+                debugLog('Input received:', { sugu, userInput });
+                
+                const report = generateReport(sugu, userInput);
+                document.getElementById('report').textContent = report;
+                debugLog('Report generated successfully');
+            } catch (error) {
+                console.error('Error:', error);
+                debugLog('Error generating report:', error, 'error');
+                document.getElementById('report').textContent = 'Error: ' + error.message;
+            }
         });
 
         function generateReport(sugu, userInput) {
+            debugLog('Starting report generation');
             const a = userInput.split(/\s+/);
+            debugLog('Input split into array:', a);
+
+            // Wrap value parsing in try-catch
+            function safeParseFloat(arr, index, label) {
+                try {
+                    if (!arr[index]) {
+                        debugLog(`Warning: ${label} - Missing value at index ${index}`, null, 'warn');
+                        return 0;
+                    }
+                    const value = parseFloat(arr[index]);
+                    if (isNaN(value)) {
+                        debugLog(`Warning: ${label} - Invalid number: ${arr[index]}`, null, 'warn');
+                        return 0;
+                    }
+                    debugLog(`${label} parsed:`, value);
+                    return value;
+                } catch (e) {
+                    debugLog(`Error parsing ${label}:`, e, 'error');
+                    return 0;
+                }
+            }
 
             let rvbase = 0, rvbasex = "PUUDU";
             if (a.includes("RVDd:")) {
-                rvbase = parseFloat(a[a.indexOf("RVDd:") + 1]);
+                rvbase = safeParseFloat(a, a.indexOf("RVDd:") + 1, "RVDd");
                 rvbasex = rvbase < 4.15 ? "normaalse suurusega" : "dilateerunud";
             }
 
             let seinapaksusx = "PUUDU";
             if (a.includes("IVSd:") && a.includes("LVPWd:")) {
-                const ivs = parseFloat(a[a.indexOf("IVSd:") + 1]);
-                const pwt = parseFloat(a[a.indexOf("LVPWd:") + 1]);
+                const ivs = safeParseFloat(a, a.indexOf("IVSd:") + 1, "IVSd");
+                const pwt = safeParseFloat(a, a.indexOf("LVPWd:") + 1, "LVPWd");
                 const seinapaksus = Math.max(ivs, pwt);
                 const limits = sugu === "m" ? [1.1, 1.35, 1.61] : [1, 1.25, 1.51];
                 seinapaksusx = seinapaksus < limits[0] ? "normaalse paksusega" :
@@ -50,7 +118,7 @@
 
             let edvi = 0, edvix = "PUUDU";
             if (a.includes("MODbp/BSA:") && a[a.indexOf("MODbp/BSA:") - 1] === "EDV") {
-                edvi = parseFloat(a[a.indexOf("MODbp/BSA:") + 1]);
+                edvi = safeParseFloat(a, a.indexOf("MODbp/BSA:") + 1, "MODbp/BSA");
                 const limits = sugu === "m" ? [74.5, 89.5, 100.5] : [61.5, 70.5, 80.5];
                 edvix = edvi < limits[0] ? "normaalse suurusega" :
                         edvi < limits[1] ? "kergelt dilateerunud" :
@@ -60,7 +128,7 @@
 
             let lvef = 60, lvefx = "PUUDU";
             if (a.includes("EF(MOD-bp):")) {
-                lvef = parseFloat(a[a.indexOf("EF(MOD-bp):") + 1]);
+                lvef = safeParseFloat(a, a.indexOf("EF(MOD-bp):") + 1, "EF(MOD-bp)");
                 const limits = sugu === "m" ?  [51.4, 40.4, 30.4] : [53.4, 40.4, 30.4];
                 lvefx = lvef > limits[0] ? "normaalne" :
                         lvef > limits[1] ? "kergelt langenud" :
@@ -70,15 +138,15 @@
 
             let tapse = 2, rvs = 15;
             if (a.includes("TAPSE:")) {
-                tapse = parseFloat(a[a.indexOf("TAPSE:") + 1]);
+                tapse = safeParseFloat(a, a.indexOf("TAPSE:") + 1, "TAPSE");
             }
 
             let ivcex = "PUUDU", ivcix = "normaalne", rap = 3;
             if (a.includes("Exp:")) {
-                const ivce = parseFloat(a[a.indexOf("Exp:") + 1]);
+                const ivce = safeParseFloat(a, a.indexOf("Exp:") + 1, "Exp");
                 ivcex = ivce < 2.1 ? "normaalse diameetriga" : "dilateerunud";
                 if (a.includes("Ins:")) {
-                    const ivci = parseFloat(a[a.indexOf("Ins:") + 1]);
+                    const ivci = safeParseFloat(a, a.indexOf("Ins:") + 1, "Ins");
                     if (ivci / ivce > 0.5) {
                         ivcix = "vähenenud";
                     }
@@ -94,8 +162,8 @@
 
             let laesvi = 0, laesvix = "PUUDU", bsa = 1.85;
             if (a.includes("Indexed:")) {
-                laesvi = parseFloat(a[a.indexOf("Indexed:") + 1]);
-                const laesv = parseFloat(a[a.indexOf("LAV(MOD-bp):") + 1]);
+                laesvi = safeParseFloat(a, a.indexOf("Indexed:") + 1, "Indexed");
+                const laesv = safeParseFloat(a, a.indexOf("LAV(MOD-bp):") + 1, "LAV(MOD-bp)");
                 bsa = Math.round(laesv / laesvi * 100) / 100;
                 laesvix = laesvi < 35 ? "normaalse suurusega" :
                           laesvi < 42 ? "kergelt dilateerunud" :
@@ -105,7 +173,7 @@
 
             let raesvi = 0, raesvix = "PUUDU";
             if (a.includes("volume/BSA:")) {
-                raesvi = parseFloat(a[a.indexOf("volume/BSA:") + 1]);
+                raesvi = safeParseFloat(a, a.indexOf("volume/BSA:") + 1, "volume/BSA");
                 const limits = sugu === "m" ? 32.5 : 27.5;
                 raesvix = raesvi < limits ? "normaalse suurusega" : "dilateerunud";
             }
@@ -115,59 +183,59 @@
             let j = 0;
             for (let i = 0; i < a.length; i++) {
                 if (a[i] === "PG:" && a[i - 1] === "mean" && a[i - 2] === "Ao") {
-                    pgmean = parseFloat(a[i + 1]);
+                    pgmean = safeParseFloat(a, i + 1, "PG mean");
                 }
                 if (a[i] === "VTI:" && a[i - 1] === "V1" && a[i - 2] === "LV") {
-                    lvotvti = parseFloat(a[i + 1]);
+                    lvotvti = safeParseFloat(a, i + 1, "VTI");
                 }
                 if (a[i] === "max:" && a[i - 1] === "V2" && a[i - 2] === "Ao") {
-                    vmax = parseFloat(a[i + 1]);
+                    vmax = safeParseFloat(a, i + 1, "V2 max");
                 }
                 if (a[i] === "area:" && a[i - 1] === "RA") {
-                    raarea = parseFloat(a[i + 1]);
+                    raarea = safeParseFloat(a, i + 1, "RA area");
                 }
                 if (a[i] === "E'" && a[i - 2] === "Lat") {
-                    elat = parseFloat(a[i + 2]);
+                    elat = safeParseFloat(a, i + 2, "E' Lat");
                 }
                 if (a[i] === "E'" && a[i - 2] === "Med") {
-                    emed = parseFloat(a[i + 2]);
+                    emed = safeParseFloat(a, i + 2, "E' Med");
                 }
                 if (a[i] === "vel:" && a[i - 1] === "max" && a[i - 2] === "TR") {
-                    trvel = parseFloat(a[i + 1]);
+                    trvel = safeParseFloat(a, i + 1, "TR vel max");
                 }
                 if (a[i] === "E" && a[i + 1] === "max" && a[i - 1] === "MV") {
-                    emax = parseFloat(a[i + 3]);
+                    emax = safeParseFloat(a, i + 3, "E max");
                 }
                 if (a[i] === "PG:" && a[i - 1] === "max" && a[i - 2] === "TR") {
-                    const trpg = parseFloat(a[i + 1]);
+                    const trpg = safeParseFloat(a, i + 1, "TR PG max");
                     const spap = trpg + rap;
                     spapx = spap > 35.5 ? `arvutuslikult hinnatuna tõusnud, sPAP ${Math.round(spap)} mmHg (TR max PG ${Math.round(trpg)} mmHg + RAP ${Math.round(rap)} mmHg)` :
                             `arvutuslikult hinnatuna normaalne, sPAP ${Math.round(spap)} mmHg (TR max PG ${Math.round(trpg)} mmHg + RAP ${Math.round(rap)} mmHg)`;
                 }
                 if (a[i] === "RV" && a[i + 1] === "Peak") {
-                    rvs = parseFloat(a[i + 4]);
+                    rvs = safeParseFloat(a, i + 4, "RV Peak");
                     rvlongx = tapse > 1.69 && rvs > 9.4 ? "normaalne" : "langenud";
                 }
                 if (a[i] === "VC_phl:" && a[i - 1] === "MR") {
-                    mrvc = parseFloat(a[i + 1]);
+                    mrvc = safeParseFloat(a, i + 1, "MR VC_phl");
                 }
                 if (a[i] === "ERO:" && a[i - 1] === "MR") {
-                    mrero = parseFloat(a[i + 1]);
+                    mrero = safeParseFloat(a, i + 1, "MR ERO");
                 }
                 if (a[i] === "volume:" && a[i - 1] === "MR") {
-                    mrvol = parseFloat(a[i + 1]);
+                    mrvol = safeParseFloat(a, i + 1, "MR volume");
                 }
                 if (a[i] === "PISA" && a[i - 1] === "MR") {
-                    mrvol = parseFloat(a[i + 2]);
+                    mrvol = safeParseFloat(a, i + 2, "MR PISA");
                 }
                 if (a[i] === "radius:" && a[i - 1] === "PISA" && a[i - 2] === "MR") {
-                    mrpisa = parseFloat(a[i + 1]);
+                    mrpisa = safeParseFloat(a, i + 1, "MR PISA radius");
                 }
                 if (a[i] === "P1/2t:" && a[i - 1] === "AI") {
-                    aipht = parseFloat(a[i + 1]);
+                    aipht = safeParseFloat(a, i + 1, "AI P1/2t");
                 }
                 if (a[i] === "VC:" && a[i - 1] === "AR") {
-                    arvc = parseFloat(a[i + 1]);
+                    arvc = safeParseFloat(a, i + 1, "AR VC");
                 }
                 j++;
             }
@@ -175,7 +243,7 @@
             let k = 0, mpapx = "", pvx = " funktsioon normis";
             for (let i = 0; i < a.length; i++) {
                 if (a[i] === "PG:" && a[i - 1] === "max" && a[i - 2] === "PI") {
-                    const prpg = parseFloat(a[i + 1]);
+                    const prpg = safeParseFloat(a, i + 1, "PI PG max");
                     pvx = "l kerge regurgitatsioon";
                     if (spapx === "ei ole hinnatav registreeritava trikuspidaalregurgitatsiooni puudumise tõttu") {
                         const mpap = prpg + rap;
@@ -188,21 +256,21 @@
 
             let dvi = 1, ava = 2;
             if (a.includes("DVI:")) {
-                dvi = parseFloat(a[a.indexOf("DVI:") + 1]);
+                dvi = safeParseFloat(a, a.indexOf("DVI:") + 1, "DVI");
             }
             if (a.includes("AVA(I,D):")) {
-                ava = parseFloat(a[a.indexOf("AVA(I,D):") + 1]);
+                ava = safeParseFloat(a, a.indexOf("AVA(I,D):") + 1, "AVA(I,D)");
             }
 
             let aort = "Aort PUUDU";
             if (a.includes("asc") && (a.includes("sinus") || a.includes("root"))) {
-                const asc = parseFloat(a[a.indexOf("asc") + 3]);
+                const asc = safeParseFloat(a, a.indexOf("asc") + 3, "asc");
                 let sinus = 0;
                 if (a.includes("root")) {
-                    sinus = parseFloat(a[a.indexOf("root") + 2]);
+                    sinus = safeParseFloat(a, a.indexOf("root") + 2, "root");
                 }
                 if (a.includes("sinus")) {
-                    sinus = parseFloat(a[a.indexOf("sinus") + 2]);
+                    sinus = safeParseFloat(a, a.indexOf("sinus") + 2, "sinus");
                 }
                 const limit = 0.727273 * bsa + 2.65455;
                 if (asc > limit && sinus > limit) {
@@ -217,10 +285,10 @@
             } else if (!a.includes("asc") && (a.includes("sinus") || a.includes("root"))) {
                 let sinus = 0;
                 if (a.includes("root")) {
-                    sinus = parseFloat(a[a.indexOf("root") + 2]);
+                    sinus = safeParseFloat(a, a.indexOf("root") + 2, "root");
                 }
                 if (a.includes("sinus")) {
-                    sinus = parseFloat(a[a.indexOf("sinus") + 2]);
+                    sinus = safeParseFloat(a, a.indexOf("sinus") + 2, "sinus");
                 }
                 const limit = 0.727273 * bsa + 2.65455;
                 if (sinus > limit) {
@@ -232,19 +300,19 @@
 
             let facx = "visuaalselt normis";
             if (a.includes("FAC:")) {
-                const fac = parseFloat(a[a.indexOf("FAC:") + 1]);
+                const fac = safeParseFloat(a, a.indexOf("FAC:") + 1, "FAC");
                 facx = fac < 35 ? `langenud (FAC ${Math.round(fac)}%)` : `normis (FAC ${Math.round(fac)}%)`;
             }
 
-            let ea = 0, emax = 0;
+            let ea = 0;
             if (a.includes("E/A:")) {
-                ea = parseFloat(a[a.indexOf("E/A:") + 1]);
+                ea = safeParseFloat(a, a.indexOf("E/A:") + 1, "E/A");
             }
 
             let diastx = "PUUDU";
             if (a.includes("E/lat") && a.includes("E/med")) {
-                const eelat = parseFloat(a[a.indexOf("E/lat") + 2]);
-                const eemed = parseFloat(a[a.indexOf("E/med") + 2]);
+                const eelat = safeParseFloat(a, a.indexOf("E/lat") + 2, "E/lat");
+                const eemed = safeParseFloat(a, a.indexOf("E/med") + 2, "E/med");
                 const eesuhe = (eelat + eemed) / 2;
                 let h = 0;
 
@@ -317,7 +385,7 @@
 
             let rrx = "Kodade virvendusarütmia  x'";
             if (a.includes("R-R:")) {
-                const rr = parseFloat(a[a.indexOf("R-R:") + 1]);
+                const rr = safeParseFloat(a, a.indexOf("R-R:") + 1, "R-R");
                 let esimene = Math.round(Math.round(60/rr / 10) * 10);
                 let teine = esimene > 60/rr ? esimene - 5 : esimene + 5;
                 rrx = `Siinusrütm ${Math.min(esimene, teine)}-${Math.max(esimene, teine)} x'`;
@@ -325,7 +393,7 @@
 
             let straintekst = "", glsx = "";
             if (a.includes("GLS_Endo_Peak_Avg:")) {
-                const gls = parseFloat(a[a.indexOf("GLS_Endo_Peak_Avg:") + 1]);
+                const gls = safeParseFloat(a, a.indexOf("GLS_Endo_Peak_Avg:") + 1, "GLS_Endo_Peak_Avg");
                 straintekst += " + LV strain";
                 if (gls < -18) {
                     glsx = `Vasaku vatsakese globaalne longitudinaalne venitatavus ehk GLS on normis (${gls}%). `;
@@ -338,7 +406,7 @@
 
             let rvstrainx = "";
             if (a.includes("RVFWSL:")) {
-                const rvstrain = parseFloat(a[a.indexOf("RVFWSL:") + 1]);
+                const rvstrain = safeParseFloat(a, a.indexOf("RVFWSL:") + 1, "RVFWSL");
                 straintekst += " + RV strain";
                 if (rvstrain < -18) {
                     rvstrainx = `Parema vatsakese vabaseina strain on normis (${rvstrain}%).`;
@@ -351,7 +419,7 @@
 
             let lastrainx = "";
             if (a.includes("LASrED:")) {
-                const lastrain = parseFloat(a[a.indexOf("LASrED:") + 1]);
+                const lastrain = safeParseFloat(a, a.indexOf("LASrED:") + 1, "LASrED");
                 straintekst += " + LA strain";
                 if (lastrain < 20) {
                     lastrainx = `Vasaku koja strain oluliselt langenud (${lastrain}%).`;
@@ -385,6 +453,7 @@ Trikuspidaalklapi struktuur iseärasusteta, minimaalne regurgitatsioon.
 
 Perikardiõõnes liigset vedelikku ei ole.`;
 
+            debugLog('Final result:', result);
             return result;
         }
     </script>
