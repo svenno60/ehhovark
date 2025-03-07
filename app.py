@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify, render_template
 import subprocess
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='.')
 
 @app.route('/')
-def index():
+def home():
     return render_template('index.html')
 
 @app.route('/generate_report', methods=['POST'])
