@@ -17,9 +17,12 @@ def generate_report():
     with open('input.txt', 'w') as f:
         f.write(f"{sugu}\n{user_input}")
 
-    # Run the Python script and capture its output
-    result = subprocess.run(['python', 'ehhovark.py'], capture_output=True, text=True)
-    report = result.stdout
+    # Run the Python script
+    subprocess.run(['python', 'ehhovark.py'], capture_output=True, text=True)
+
+    # Read the result from the output file
+    with open('output.txt', 'r') as f:
+        report = f.read()
 
     return jsonify({'report': report})
 

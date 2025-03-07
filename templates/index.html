@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ehhovark Report Generator</title>
+</head>
+<body>
+    <h1>Ehhovark Report Generator</h1>
+    <form id="reportForm">
+        <label for="sugu">Sugu (M/N):</label>
+        <input type="text" id="sugu" name="sugu" required><br><br>
+        <label for="user_input">Enter your text:</label><br>
+        <textarea id="user_input" name="user_input" rows="10" cols="50" required></textarea><br><br>
+        <button type="submit">Generate Report</button>
+    </form>
+    <div id="reportResult"></div>
+
+    <script>
+        document.getElementById('reportForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const sugu = document.getElementById('sugu').value;
+            const user_input = document.getElementById('user_input').value;
+
+            fetch('/generate_report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ sugu: sugu, user_input: user_input })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('reportResult').innerText = data.report;
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>

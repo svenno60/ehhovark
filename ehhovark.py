@@ -1,18 +1,8 @@
-print("Sugu M/N?")
-sugu=input()
+# Read input from the file
+with open('input.txt', 'r') as f:
+    sugu = f.readline().strip()
+    user_input = f.read().strip()
 
-# Collect multi-line input from the user
-print("Enter your text (press Enter on an empty line to finish):")
-lines = []
-while True:
-    line = input()
-    if line == "":  # Stop collecting input when the user enters an empty line
-        break
-    lines.append(line)
- 
-# Join all lines into a single string
-user_input = " ".join(lines)
- 
 # Split the input into words and store them in a list
 a = user_input.split()
 
@@ -391,7 +381,7 @@ if (a.count("LASrED:")>0):
         lastrainx="Vasaku koja strain on normis ("+str(lastrain)+"%)."
         
         
-print("""Täismahus ehhokardiograafia"""+straintekst+""".
+result = """Täismahus ehhokardiograafia"""+straintekst+""".
  
 Suboptimaalne nähtavus. """+rrx+""".
  
@@ -411,4 +401,8 @@ Mitraalklapi struktuur iseärasusteta, """+mrx+""".
 Trikuspidaalklapi struktuur iseärasusteta, minimaalne regurgitatsioon.
  
 Perikardiõõnes liigset vedelikku ei ole.
-""")
+"""
+
+# Write the result to a file
+with open('output.txt', 'w') as f:
+    f.write(result)
