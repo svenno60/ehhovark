@@ -1,7 +1,10 @@
-# Read input from the file
-with open('input.txt', 'r') as f:
-    sugu = f.readline().strip()
-    user_input = f.read().strip()
+import sys
+import json
+
+# Read input from stdin
+input_data = json.loads(sys.stdin.read())
+sugu = input_data['sugu']
+user_input = input_data['user_input']
 
 # Split the input into words and store them in a list
 a = user_input.split()
@@ -381,28 +384,27 @@ if (a.count("LASrED:")>0):
         lastrainx="Vasaku koja strain on normis ("+str(lastrain)+"%)."
         
         
-result = """Täismahus ehhokardiograafia"""+straintekst+""".
+result = """Täismahus ehhokardiograafia""" + straintekst + """.
  
-Suboptimaalne nähtavus. """+rrx+""".
+Suboptimaalne nähtavus. """ + rrx + """.
  
-Vasaku vatsakese õõs """ + edvix + """ (EDV MODbp/BSA """+str(round(edvi))+""" ml/m²), müokard """+seinapaksusx+""". Üldine süstoolne funktsioon on """ + lvefx + """, EF bp """ + str(round(lvef)) + """%, LVOT VTI """ + str(round(lvotvti)) + """ cm. """+ glsx +"""Segmentaarset kineetikahäiret ei tähelda.
-Diastoolne """+diastx+""". """+lastrainx+"""
+Vasaku vatsakese õõs """ + edvix + """ (EDV MODbp/BSA """ + str(round(edvi)) + """ ml/m²), müokard """ + seinapaksusx + """. Üldine süstoolne funktsioon on """ + lvefx + """, EF bp """ + str(round(lvef)) + """%, LVOT VTI """ + str(round(lvotvti)) + """ cm. """ + glsx + """Segmentaarset kineetikahäiret ei tähelda.
+Diastoolne """ + diastx + """.""" + lastrainx + """
  
-Parem vatsake on """+rvbasex+""", basaalne diameeter """+str(rvbase)+""" cm. Longitudinaalne süstoolne funktsioon """+rvlongx+""" (TAPSE """+str(round(tapse,1))+""" cm, RV S' """+str(rvs)+""" cm/s), tsirkulaarne süstoolne funktsioon """+facx+""". """+rvstrainx+"""
-Kopsuringe süstoolne rõhk """+spapx+""". """+mpapx+"""
-Alumine õõnesveen """+ivcex+""", respiratoorne reaktiivsus """+ivcix+""".
-Vasak koda on """+laesvix+""" (LAESVi """+str(round(laesvi))+""" ml/m²). Parem koda on """+raesvix+""" (RAESVi """+str(round(raesvi))+""" ml/m², RA pindala """+str(round(raarea))+""" cm²).
+Parem vatsake on """ + rvbasex + """, basaalne diameeter """ + str(rvbase) + """ cm. Longitudinaalne süstoolne funktsioon """ + rvlongx + """ (TAPSE """ + str(round(tapse, 1)) + """ cm, RV S' """ + str(rvs) + """ cm/s), tsirkulaarne süstoolne funktsioon """ + facx + """.""" + rvstrainx + """
+Kopsuringe süstoolne rõhk """ + spapx + """.""" + mpapx + """
+Alumine õõnesveen """ + ivcex + """, respiratoorne reaktiivsus """ + ivcix + """.
+Vasak koda on """ + laesvix + """ (LAESVi """ + str(round(laesvi)) + """ ml/m²). Parem koda on """ + raesvix + """ (RAESVi """ + str(round(raesvi)) + """ ml/m², RA pindala """ + str(round(raarea)) + """ cm²).
 Kodade vaheseinas šundivoolu ei visualiseeru.
  
-Aordiklapp on trikuspiidne, struktuur iseärasusteta, """+asx+aix+""".
-"""+aort+""".
-Pulmonaalklapi"""+pvx+""".
-Mitraalklapi struktuur iseärasusteta, """+mrx+""".
+Aordiklapp on trikuspiidne, struktuur iseärasusteta, """ + asx + aix + """.
+""" + aort + """.
+Pulmonaalklapi""" + pvx + """.
+Mitraalklapi struktuur iseärasusteta, """ + mrx + """.
 Trikuspidaalklapi struktuur iseärasusteta, minimaalne regurgitatsioon.
  
 Perikardiõõnes liigset vedelikku ei ole.
 """
 
-# Write the result to a file
-with open('output.txt', 'w') as f:
-    f.write(result)
+# Print the result to stdout
+print(result)

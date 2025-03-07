@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import subprocess
+import json
 
 app = Flask(__name__, template_folder='.')
 
@@ -13,16 +14,15 @@ def generate_report():
     sugu = data['sugu']
     user_input = data['user_input']
 
-    # Create a temporary input file for the Python script
-    with open('input.txt', 'w') as f:
-        f.write(f"{sugu}\n{user_input}")
+    # Run the Python script and pass the input data
+    result = subprocess.run(
+        ['python', 'ehhovark.py'],
+        input=json.dumps({'sugu': sugu, 'user_input': user_input}),
+        capture_output=True,
+        text=True
+    )
 
-    # Run the Python script
-    subprocess.run(['python', 'ehhovark.py'], capture_output=True, text=True)
-
-    # Read the result from the output file
-    with open('output.txt', 'r') as f:
-        report = f.read()
+    report = result.stdout
 
     return jsonify({'report': report})
 
